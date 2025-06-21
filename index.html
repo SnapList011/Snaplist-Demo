@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Snaplist Camera Demo</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background: #0a0f1c;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    h1 {
+      color: #00ffff;
+    }
+    #camera {
+      width: 100%;
+      max-width: 400px;
+      border: 2px solid #00ffff;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    #preview, #result {
+      margin-top: 20px;
+    }
+    button {
+      background: #00ffff;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Snaplist Camera Demo</h1>
+  <video id="camera" autoplay playsinline></video>
+  <button onclick="takePhoto()">📸 Snap It!</button>
+  <div id="preview">
+    <canvas id="snapshot" width="400"></canvas>
+  </div>
+  <div id="result"></div>
+
+  <script>
+    const video = document.getElementById('camera');
+    const canvas = document.getElementById('snapshot');
+    const context = canvas.getContext('2d');
+    const resultDiv = document.getElementById('result');
+
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" } },
+      audio: false
+    }).then(stream => {
+      video.srcObject = stream;
+    });
+
+    function takePhoto() {
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => {
+        const formData = new FormData();
+        formData.append('image', blob, 'photo.jpg');
+
+        fetch('http://localhost:5000/analyze', {
+          method: 'POST',
+          body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+          resultDiv.innerHTML = `
+            <h3>📝 AI Listing</h3>
+            <p><strong>Title:</strong> ${data.title}</p>
+            <p><strong>Price:</strong> $${data.price}</p>
+            <p><strong>Description:</strong> ${data.description}</p>
+          `;
+        })
+        .catch(err => {
+          resultDiv.innerHTML = "<p style='color:red;'>❌ Failed to fetch AI response.</p>";
+        });
+      }, 'image/jpeg');
+    }
+  </script>
+</body>
+</html>
